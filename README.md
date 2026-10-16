@@ -1,13 +1,13 @@
 # rust-learning
 
-Mein Rust-Lernprojekt: Sessions mit Übungen, abgesichert durch Tests.
+My Rust learning path: one session per topic, each with exercises verified by tests.
 
-Themen und Fortschritt stehen in [LERNZIELE.md](LERNZIELE.md).
+Topics and progress are tracked in [LEARNING_GOALS.md](LEARNING_GOALS.md).
 
-## Befehle
+## Commands
 
 ```sh
-cargo run      # ausführen
-cargo test     # Übungen prüfen
-cargo clippy   # Lints
+cargo run      # run
+cargo test     # check the exercises
+cargo clippy   # lints
 ```
