@@ -5,7 +5,7 @@ Based on the chapters of the Rust Book (doc.rust-lang.org/book), plus hands-on t
 
 ## Phase 1: The language
 - [x] 1. Ownership, borrowing, `String` vs `&str`
-- [ ] 2. Structs: `impl`, methods, `Self`, `::new()` constructors
+- [x] 2. Structs: `impl`, methods, `Self`, `::new()` constructors
 - [ ] 3. Enums with data, `match`, `if let`, `let else`, `Option`
 - [ ] 4. Modules & files: `mod`, `pub`, `use`, `crate::`/`super::`, `foo.rs` vs `foo/mod.rs`, `lib.rs` + `main.rs`
 - [ ] 5. Cargo & crates: dependencies (`cargo add`), crates.io, `Cargo.lock`, features, workspaces

@@ -29,44 +29,52 @@ struct Task {
 impl Task {
     /// Creates an open task with the given title.
     fn new(title: &str) -> Self {
-        todo!()
+        Task {
+            title: title.to_string(),
+            done: false,
+        }
     }
 
     /// Creates a task that is already done. Reuse `Self::new`.
     fn new_done(title: &str) -> Self {
-        todo!()
+        let mut a = Self::new(title);
+        a.complete();
+        a
     }
 
     /// Returns whether the task is done.
     fn is_done(&self) -> bool {
-        todo!()
+        self.done
     }
 
     /// Marks the task as done.
     fn complete(&mut self) {
-        todo!()
+        self.done = true;
     }
 
     /// Returns the title without copying it.
     fn title(&self) -> &str {
-        todo!()
+        &self.title
     }
 
     /// One line for the CLI: "[ ] Write tests" or "[x] Write tests".
-    fn label(self) -> String {
+    fn label(&self) -> String {
         let mark = if self.done { 'x' } else { ' ' };
         format!("[{mark}] {}", self.title)
     }
 
     /// Gives away the owned title. Afterwards the task is gone.
     fn into_title(self) -> String {
-        todo!()
+        self.title
     }
 
     /// Returns the same task with a new title; `done` stays as it was.
     /// Use struct update syntax: `Self { title: …, ..self }`.
     fn renamed(self, title: &str) -> Self {
-        todo!()
+        Self {
+            title: title.to_string(),
+            ..self
+        }
     }
 }
 
@@ -77,12 +85,12 @@ struct TaskId(u32);
 impl TaskId {
     /// The first id is 1.
     fn first() -> Self {
-        todo!()
+        TaskId(1)
     }
 
     /// The id after this one. `self` stays usable.
     fn next(&self) -> Self {
-        todo!()
+        Self(self.0 + 1)
     }
 }
 
