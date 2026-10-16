@@ -20,6 +20,7 @@ Topics and progress are tracked in `LEARNING_GOALS.md`.
   - `session-NN-problem`: the state with the exercises (code with `todo!()`, tests red), before solving
   - `session-NN-solution`: the state after solving (tests green)
   - `NN` has two digits (`session-02-problem`). Session 1 only has `session-01-solution`; its problem state was never committed.
+  - A GitHub ruleset blocks moving or deleting `session-*` tags, so tag the right commit before pushing.
 
 ## Commands
 
