@@ -9,6 +9,7 @@ Themen und Fortschritt stehen in `LERNZIELE.md`.
 
 ## Sessions
 
+- **Theorie zuerst:** Jede neue Session beginnt mit `/cj-teach <Thema aus LERNZIELE.md>`, um das Thema theoretisch zu vertiefen. Erst danach Übungen in `src/main.rs` schreiben. Der Skill kann nur vom User gestartet werden (`disable-model-invocation`) – Claude erinnert zu Session-Beginn daran, falls er noch nicht lief.
 - **Erklärungen ausführlich:** Konzepte gründlich erklären, mit dem Warum dahinter, Beispielen und Vergleich zu Dart. Lieber zu viel als zu knapp.
 - **Zwei Git-Tags pro Session:**
   - `session-NN-problem` – Stand mit den Aufgaben (Code mit `todo!()`, Tests rot), vor dem Lösen
