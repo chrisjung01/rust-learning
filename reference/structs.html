@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structs Cheat Sheet</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<nav class="lesson-nav">Reference · Lesson: <a href="../lessons/0001-structs-impl-self-new.html">0001 Structs, impl, Self, ::new()</a></nav>
+
+<h1>Structs &amp; <code>impl</code></h1>
+<p class="subtitle">Cheat sheet. Source: <a href="https://doc.rust-lang.org/book/ch05-00-structs.html">Rust Book ch. 5</a>, <a href="https://rust-lang.github.io/api-guidelines/predictability.html">API Guidelines</a>.</p>
+
+<h2>Skeleton</h2>
+<pre><code>struct Task {                 // data only; own your data (String, not &amp;str)
+    title: String,
+    done: bool,
+}
+
+impl Task {
+    fn new(title: &amp;str) -&gt; Self {                  // associated fn, called Task::new(..)
+        Self { title: title.to_string(), done: false }
+    }
+    fn is_done(&amp;self) -&gt; bool { self.done }        // read
+    fn complete(&amp;mut self) { self.done = true; }    // change
+    fn into_title(self) -&gt; String { self.title }    // consume
+}</code></pre>
+
+<h2>Receivers</h2>
+<table>
+  <tr><th>Write</th><th>Means</th><th>Use when</th><th>Caller</th></tr>
+  <tr><td><code>&amp;self</code></td><td><code>self: &amp;Self</code></td><td>only reading (default)</td><td>keeps value</td></tr>
+  <tr><td><code>&amp;mut self</code></td><td><code>self: &amp;mut Self</code></td><td>changing fields</td><td>keeps value, needs <code>let mut</code></td></tr>
+  <tr><td><code>self</code></td><td><code>self: Self</code></td><td>turning into something else (<code>into_…</code>, <code>build()</code>)</td><td>value moved</td></tr>
+  <tr><td><em>none</em></td><td>associated function</td><td>constructors, helpers</td><td><code>Type::f()</code></td></tr>
+</table>
+
+<h2>Names</h2>
+<table>
+  <tr><td><code>Self</code></td><td>alias for the <code>impl</code>'s type</td></tr>
+  <tr><td><code>self</code></td><td>the value (Dart <code>this</code>)</td></tr>
+  <tr><td><code>Type::f</code></td><td>path: function in the type's namespace</td></tr>
+  <tr><td><code>value.f()</code></td><td>method call; Rust adds <code>&amp;</code> / <code>&amp;mut</code> / <code>*</code> itself</td></tr>
+</table>
+
+<h2>Constructor conventions</h2>
+<table>
+  <tr><td><code>new(..)</code></td><td>main constructor (just a convention, not a keyword)</td></tr>
+  <tr><td><code>with_…(..)</code></td><td>variant with extra settings: <code>Vec::with_capacity(n)</code></td></tr>
+  <tr><td><code>from_…(..)</code></td><td>conversion from another value</td></tr>
+  <tr><td><code>Default</code></td><td>trait for the obvious empty value (session 9)</td></tr>
+  <tr><td colspan="2">No overloading: different parameters → different name.</td></tr>
+</table>
+
+<h2>Literal syntax</h2>
+<pre><code>Task { title, done: false }      // field init shorthand (variable `title`)
+Task { done: true, ..other }     // struct update: rest from `other`, MOVES non-Copy fields; `..` last
+struct TaskId(u32);  id.0         // tuple struct / newtype
+struct Marker;                   // unit-like struct</code></pre>
+
+<h2>Dart → Rust</h2>
+<table>
+  <tr><th>Dart</th><th>Rust</th></tr>
+  <tr><td><code>class</code> with fields + methods</td><td><code>struct</code> + one or more <code>impl</code> blocks</td></tr>
+  <tr><td><code>Task(this.title)</code></td><td><code>fn new(title: &amp;str) -&gt; Self</code></td></tr>
+  <tr><td><code>Task.done(..)</code> named constructor</td><td><code>Task::new_done(..)</code></td></tr>
+  <tr><td><code>factory</code> constructor</td><td>every constructor (it's a plain fn; can return <code>Option</code>/<code>Result</code>)</td></tr>
+  <tr><td><code>static</code> method</td><td>associated function</td></tr>
+  <tr><td><code>final</code> field</td><td>no per-field mutability; <code>let</code> vs <code>let mut</code> on the binding</td></tr>
+  <tr><td>implicit getters</td><td>none; write <code>fn title(&amp;self) -&gt; &amp;str</code> for private fields</td></tr>
+  <tr><td><code>copyWith(..)</code></td><td><code>Task { field: x, ..old }</code> (moves!)</td></tr>
+</table>
+
+<h2>Common errors</h2>
+<table>
+  <tr><td><code>E0106</code> missing lifetime specifier</td><td>reference field in a struct → use an owned type</td></tr>
+  <tr><td><code>E0382</code> borrow of moved value</td><td>value used after a <code>self</code> method or <code>..value</code></td></tr>
+  <tr><td><code>E0596</code> cannot borrow as mutable</td><td><code>&amp;mut self</code> method on a binding without <code>mut</code></td></tr>
+  <tr><td><code>E0063</code> missing field</td><td>struct literal must name every field</td></tr>
+</table>
+</body>
+</html>

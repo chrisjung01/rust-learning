@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structs and impl</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/quiz.js"></script>
+</head>
+<body>
+
+<nav class="lesson-nav">
+  Lesson 0001 · Session 2 of <a href="../LEARNING_GOALS.md">LEARNING_GOALS.md</a> ·
+  Cheat sheet: <a href="../reference/structs.html">Structs &amp; impl</a>
+</nav>
+
+<h1>Structs, <code>impl</code>, <code>Self</code> and <code>::new()</code></h1>
+<p class="subtitle">Where a Dart class does one job, Rust splits it in two: the struct holds the data, the <code>impl</code> block holds the behaviour.</p>
+
+<p><strong>The win for today:</strong> you can write a struct with a constructor and methods, and for every method you can say which of <code>&amp;self</code>, <code>&amp;mut self</code> or <code>self</code> it needs, and why.</p>
+
+<p><strong>Why it matters for the mission:</strong> every tool you plan to build is made of structs. The CLI's parsed arguments (<code>clap</code> derives them onto a struct), a <code>serde</code> config, an <code>axum</code> request body, the types <code>flutter_rust_bridge</code> turns into Dart classes. Running example for this lesson: the <code>Task</code> type of a small todo CLI.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>1. The struct: only data</h2>
+
+<div class="cols">
+  <div class="dart"><div class="label">Dart</div>
+<pre><code>class Task {
+  final String title;
+  bool done = false;
+
+  Task(this.title);
+
+  void complete() =&gt; done = true;
+}</code></pre></div>
+  <div class="rust"><div class="label">Rust</div>
+<pre><code>struct Task {
+    title: String,
+    done: bool,
+}
+
+impl Task {
+    fn new(title: &amp;str) -&gt; Self {
+        Self { title: title.to_string(), done: false }
+    }
+
+    fn complete(&amp;mut self) {
+        self.done = true;
+    }
+}</code></pre></div>
+</div>
+
+<p>The Dart class bundles fields, constructor and methods in one block. In Rust the <code>struct</code> only lists fields and their types. Behaviour lives in a separate <code>impl Task { … }</code> block, and a type may have several of them (<a href="https://doc.rust-lang.org/book/ch05-03-method-syntax.html#multiple-impl-blocks">Book 5.3</a>). That split pays off later: traits (session 9) are also implemented in their own <code>impl Trait for Task</code> blocks, so "the data" and "what the data can do" stay separate pieces of code.</p>
+
+<h3>Owned fields: <code>String</code>, not <code>&amp;str</code></h3>
+<p>Notice <code>title: String</code>. You could try <code>title: &amp;str</code>, but the compiler stops you with <code>error[E0106]: missing lifetime specifier</code>. A reference in a struct means "this struct must not outlive the data it points to", and Rust needs lifetimes (session 11) to check that. The Book's advice for now: <em>"we want each instance of this struct to own all of its data and for that data to be valid for as long as the entire struct is valid"</em> (<a href="https://doc.rust-lang.org/book/ch05-01-defining-structs.html#ownership-of-struct-data">Book 5.1</a>). That's where session 1 comes back: <code>new</code> accepts a borrowed <code>&amp;str</code> (callers can pass a literal or a <code>&amp;String</code>) and creates the owned <code>String</code> inside.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>2. Creating a value: there are no constructors</h2>
+
+<p>This is the biggest surprise coming from Dart. Rust has <strong>no constructor feature at all</strong>. There is only one way to create a struct value: the <em>struct literal</em>, which names every field:</p>
+
+<pre><code>let t = Task { title: String::from("Write tests"), done: false };</code></pre>
+
+<p>Leave out a field and it doesn't compile. Rust has no default field values, no implicit <code>null</code>, and no half-initialised object. The guarantee: whenever you hold a <code>Task</code>, every field has a valid value.</p>
+
+<p>So what is <code>Task::new</code>? <strong>An ordinary function</strong> that happens to live in the <code>impl</code> block and returns a struct literal. The Book: <em>"These are often called <code>new</code>, but <code>new</code> isn't a special name and isn't built into the language"</em> (<a href="https://doc.rust-lang.org/book/ch05-03-method-syntax.html#associated-functions">Book 5.3</a>). The Rust API Guidelines make it the convention: <em>"Constructors are static (no <code>self</code>) inherent methods for the type that they construct"</em> (<a href="https://rust-lang.github.io/api-guidelines/predictability.html#constructors-are-static-inherent-methods-c-ctor">C-CTOR</a>).</p>
+
+<div class="note why">
+<strong>Why build it this way?</strong> A Dart constructor is special: it runs with a half-built <code>this</code>, has initializer lists, <code>late</code> fields and the rules about when <code>this</code> may be used. Rust drops all of that. Building a value is just an expression, so a "constructor" can do anything a function can: validate input, return <code>Option&lt;Task&gt;</code> or <code>Result&lt;Task, E&gt;</code> (session 6), or return a different value entirely. That's the role Dart gives to <code>factory</code> constructors, and in Rust every constructor already works that way.
+</div>
+
+<h3>Several constructors = several names</h3>
+<p>Rust has no function overloading, so you can't have two <code>new</code>s with different parameters. Instead, you give them names. That's close to Dart's named constructors:</p>
+
+<div class="cols">
+  <div class="dart"><div class="label">Dart</div>
+<pre><code>Task(this.title);
+Task.done(this.title) : done = true;
+
+final t = Task.done('Ship');</code></pre></div>
+  <div class="rust"><div class="label">Rust</div>
+<pre><code>fn new(title: &amp;str) -&gt; Self { … }
+fn new_done(title: &amp;str) -&gt; Self { … }
+
+let t = Task::new_done("Ship");</code></pre></div>
+</div>
+
+<p>Usual names from the guidelines: <code>new</code> for the main one, <code>with_…</code> for variants with extra settings (<code>Vec::with_capacity(10)</code>), <code>from_…</code> for conversions. Types that have an obvious empty state also implement <code>Default</code> (we'll see that with traits in session 9).</p>
+
+<h3>Two shortcuts in struct literals</h3>
+<p><strong>Field init shorthand:</strong> if a variable has the same name as a field, write it once:</p>
+<pre><code>fn new(title: String) -&gt; Self {
+    Self { title, done: false }   // instead of title: title
+}</code></pre>
+
+<p><strong>Struct update syntax</strong> <code>..other</code> fills the remaining fields from another value. It looks like Dart's <code>copyWith</code>, but there's a catch: it <em>moves</em>, like an assignment (<a href="https://doc.rust-lang.org/book/ch05-01-defining-structs.html#creating-instances-from-other-instances-with-struct-update-syntax">Book 5.1</a>):</p>
+<pre><code>let a = Task::new("Write tests");
+let b = Task { done: true, ..a };   // a.title (a String) moves into b
+println!("{}", a.title);            // error[E0382]: borrow of moved value: `a.title`</code></pre>
+<p>If only <code>Copy</code> fields (like <code>bool</code>, <code>u32</code>) are taken over, <code>a</code> stays usable. That's the same move rule as in session 1, applied to fields one by one.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>3. <code>impl</code> and <code>Self</code></h2>
+
+<p>Inside <code>impl Task</code>, <code>Self</code> (capital S) is an <strong>alias for the type</strong>: <em>"Within an <code>impl</code> block, the type <code>Self</code> is an alias for the type that the <code>impl</code> block is for"</em> (<a href="https://doc.rust-lang.org/book/ch05-03-method-syntax.html#defining-methods">Book 5.3</a>). <code>-&gt; Self</code> and <code>Self { … }</code> mean exactly <code>-&gt; Task</code> and <code>Task { … }</code>. You use it so the code doesn't repeat the type name, and later, with generics (<code>impl&lt;T&gt; Stack&lt;T&gt;</code>), it saves you from writing out long types.</p>
+
+<table>
+  <tr><th></th><th>Means</th><th>Dart equivalent</th></tr>
+  <tr><td><code>Self</code></td><td>the type (<code>Task</code>)</td><td>the class name, <code>Task</code></td></tr>
+  <tr><td><code>self</code></td><td>the value the method is called on</td><td><code>this</code></td></tr>
+</table>
+
+<h3>Associated functions vs. methods</h3>
+<p>Every <code>fn</code> in an <code>impl</code> block is an <em>associated function</em>. If its first parameter is some form of <code>self</code>, it's also a <em>method</em>:</p>
+
+<table>
+  <tr><th></th><th>First parameter</th><th>Call</th><th>Dart</th></tr>
+  <tr><td>associated function</td><td>none</td><td><code>Task::new("x")</code></td><td><code>static</code> method / constructor</td></tr>
+  <tr><td>method</td><td><code>self</code>, <code>&amp;self</code>, <code>&amp;mut self</code></td><td><code>task.complete()</code></td><td>instance method</td></tr>
+</table>
+
+<p><code>::</code> means "something inside this namespace" (type, module); <code>.</code> means "call on this value". Methods can be called with <code>::</code> too: <code>Task::complete(&amp;mut task)</code> is the same as <code>task.complete()</code>. That shows what a method really is: a function whose first parameter is the value.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>4. The three receivers</h2>
+
+<p>This is the part with no counterpart in Dart, and it ties straight into ownership. In Dart, <code>this</code> is always a reference to a mutable object. In Rust, every method declares <strong>how</strong> it gets access to <code>self</code>, and the three options are exactly the three kinds of access from session 1:</p>
+
+<table>
+  <tr><th>Receiver</th><th>Short for</th><th>Method may…</th><th>Caller afterwards</th></tr>
+  <tr><td><code>&amp;self</code></td><td><code>self: &amp;Self</code></td><td>read</td><td>value unchanged, still usable</td></tr>
+  <tr><td><code>&amp;mut self</code></td><td><code>self: &amp;mut Self</code></td><td>read and change</td><td>value changed, still usable; caller needs <code>let mut</code></td></tr>
+  <tr><td><code>self</code></td><td><code>self: Self</code></td><td>anything, takes ownership</td><td>value is <strong>moved</strong>, gone</td></tr>
+</table>
+<p class="cite">"<code>&amp;self</code> is actually short for <code>self: &amp;Self</code>" (<a href="https://doc.rust-lang.org/book/ch05-03-method-syntax.html#defining-methods">Book 5.3</a>).</p>
+
+<pre><code>impl Task {
+    fn is_done(&amp;self) -&gt; bool { self.done }          // only reads
+    fn complete(&amp;mut self) { self.done = true; }        // changes
+    fn into_title(self) -&gt; String { self.title }        // consumes, hands out the String
+}
+
+let mut t = Task::new("Write tests");
+t.complete();                  // needs `let mut t`
+assert!(t.is_done());
+let title = t.into_title();    // t is moved here
+// t.is_done();                // error[E0382]: borrow of moved value: `t`</code></pre>
+
+<p><strong>The rule of thumb:</strong> take the weakest access that works. <code>&amp;self</code> by default, <code>&amp;mut self</code> if the method changes fields, <code>self</code> only if the method turns the value into something else or uses it up. Typical <code>self</code> methods: <code>into_…</code> conversions (by naming convention, <code>into_</code> consumes), builder methods, <code>finish()</code>/<code>build()</code>. Why <code>into_title</code> needs <code>self</code>: it gives away the owned <code>String</code> without cloning. With <code>&amp;self</code> it could only return <code>&amp;str</code> or a clone.</p>
+
+<div class="note why">
+<strong>Why the signature says it:</strong> in Dart you have to read a method's body (or its docs) to know whether it changes the object. In Rust, <code>&amp;self</code> in the signature is a promise checked by the compiler. You can see from the signature alone whether <code>t.is_done()</code> may change <code>t</code>, and the borrow rules from session 1 ensure nobody reads <code>t</code> while a <code>&amp;mut self</code> method changes it.
+</div>
+
+<h3>Mutability belongs to the binding, not to the field</h3>
+<p>In Dart you mark individual fields <code>final</code>. Rust has no per-field mutability: <em>"the entire instance must be mutable; Rust doesn't allow us to mark only certain fields as mutable"</em> (<a href="https://doc.rust-lang.org/book/ch05-01-defining-structs.html#defining-and-instantiating-structs">Book 5.1</a>). Whether a <code>Task</code> can change is decided by the person holding it (<code>let</code> vs <code>let mut</code>), not by the type. If you want "read-only from outside", you make fields private and offer no <code>&amp;mut self</code> method that changes them, which leads to the next point.</p>
+
+<h3>Automatic referencing</h3>
+<p>You wrote <code>t.complete()</code>, not <code>(&amp;mut t).complete()</code>. Rust adds <code>&amp;</code>, <code>&amp;mut</code> or <code>*</code> on its own so that the value fits the receiver: <em>"Calling methods is one of the few places in Rust with this behavior"</em> (<a href="https://doc.rust-lang.org/book/ch05-03-method-syntax.html#wheres-the---operator">Book 5.3</a>). It never makes a value mutable for you, though: calling <code>complete()</code> on a plain <code>let t</code> is a compile error.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>5. Getters and privacy, in short</h2>
+
+<p>A method may have the same name as a field: <code>t.title()</code> calls the method, <code>t.title</code> reads the field (<a href="https://doc.rust-lang.org/book/ch05-03-method-syntax.html#defining-methods">Book 5.3</a>). Rust generates no getters, unlike Dart's implicit ones. Usually you write one only when the field is private:</p>
+
+<pre><code>pub struct Task { title: String, done: bool }   // the type is public, the fields are not
+
+impl Task {
+    pub fn title(&amp;self) -&gt; &amp;str { &amp;self.title }   // read access, no clone
+}</code></pre>
+
+<p>Fields are private by default, outside the module where the struct lives (<a href="https://doc.rust-lang.org/book/ch07-03-paths-for-referring-to-an-item-in-the-module-tree.html#making-structs-and-enums-public">Book 7.3</a>). Code outside then <em>cannot</em> write a struct literal, and <code>Task::new</code> becomes the only way in. That's how a Rust type enforces invariants ("a title is never empty"). Modules are session 4. In today's exercises everything sits in one file, so privacy doesn't apply yet.</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>6. Two more struct forms</h2>
+
+<pre><code>struct TaskId(u32);    // tuple struct: fields have no names, accessed as id.0
+struct Done;           // unit-like struct: no fields at all</code></pre>
+
+<p>A tuple struct with one field is the <strong>newtype</strong> pattern: <code>TaskId(u32)</code> and <code>UserId(u32)</code> are different types, so mixing them up is a compile error, at zero runtime cost. Dart has no direct equivalent (extension types in Dart 3.3 are the closest). Unit-like structs matter later for traits (<a href="https://doc.rust-lang.org/book/ch05-01-defining-structs.html#using-tuple-structs-without-named-fields-to-create-different-types">Book 5.1</a>).</p>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>7. Check yourself</h2>
+<p>Answer from memory first, without scrolling up. The effort of recalling is what makes it stick.</p>
+
+<div class="quiz">
+  <div class="q">1. <code>impl Task { fn new(t: &amp;str) -&gt; Self { … } }</code>: how do you call it?</div>
+  <button data-correct><code>Task::new("x")</code></button>
+  <button><code>Task.new("x")</code></button>
+  <button><code>new Task("x")</code></button>
+  <button><code>Task("x")</code></button>
+  <div class="feedback"><code>new</code> has no <code>self</code> parameter, so it's an associated function and is called through the type with <code>::</code>. <code>new</code> is a plain name, not a keyword.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">2. A method sets <code>self.done = true</code>. Which receiver does it need?</div>
+  <button><code>&amp;self</code></button>
+  <button data-correct><code>&amp;mut self</code></button>
+  <button><code>Self</code></button>
+  <button><code>&amp;Self</code></button>
+  <div class="feedback"><code>&amp;mut self</code>: it changes the value but the caller keeps it. <code>self</code> (lowercase) would also compile with <code>mut self</code>, but would consume the task. <code>Self</code> alone is a type, not a receiver.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">3. <code>fn into_title(self) -&gt; String</code>. After <code>let s = t.into_title();</code>, what about <code>t</code>?</div>
+  <button>t is still fully usable</button>
+  <button>t is reset to default</button>
+  <button>t becomes a shared reference</button>
+  <button data-correct>t has been moved away</button>
+  <div class="feedback">A <code>self</code> receiver takes ownership. <code>t</code> moved into the method, any later use is <code>E0382</code>.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">4. <code>let t = Task::new("x"); t.complete();</code> with <code>fn complete(&amp;mut self)</code>. What happens?</div>
+  <button>Runtime panic on the call</button>
+  <button>Works, Rust adds mut automatically</button>
+  <button data-correct>Compile error: t is immutable</button>
+  <button>Works, complete gets a copy</button>
+  <div class="feedback">Automatic referencing adds <code>&amp;mut</code>, but you can only borrow mutably from a <code>let mut</code> binding. Mutability is a property of the binding.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">5. Inside <code>impl Task</code>, what is <code>Self</code>?</div>
+  <button>The current instance value</button>
+  <button data-correct>An alias for Task</button>
+  <button>A reference to self</button>
+  <button>A generic type parameter</button>
+  <div class="feedback"><code>Self</code> is the type, <code>self</code> is the value. <code>-&gt; Self</code> is exactly <code>-&gt; Task</code>.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">6. Why does almost every Rust type have a <code>new</code> function?</div>
+  <button><code>new</code> is a reserved keyword</button>
+  <button>Required for every heap allocation</button>
+  <button>Called automatically at variable declaration</button>
+  <button data-correct>Plain convention for constructor functions</button>
+  <div class="feedback">The language only knows struct literals. <code>new</code> is a convention (API Guidelines C-CTOR); <code>Box::new</code> allocates because of what Box does, not because of the name.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">7. <code>let b = Task { done: true, ..a };</code>. Can you use <code>a.title</code> afterwards?</div>
+  <button data-correct>No, title moved into b</button>
+  <button>Yes, the String is copied</button>
+  <button>Yes, b borrows from a</button>
+  <button>No, .. must come first</button>
+  <div class="feedback">Struct update syntax moves non-<code>Copy</code> fields. <code>..a</code> comes <em>last</em>, not first.</div>
+</div>
+
+<div class="quiz">
+  <div class="q">8. Why <code>Task::new</code> and <code>Task::new_done</code> instead of two <code>new</code>s?</div>
+  <button>Only one impl per type</button>
+  <button>new may never take arguments</button>
+  <button data-correct>Rust has no function overloading</button>
+  <button>Named functions are always faster</button>
+  <div class="feedback">One name, one signature. A type may have several <code>impl</code> blocks, and <code>new</code> may take any parameters.</div>
+</div>
+
+<p class="score" id="score"></p>
+
+<h3>Predict the compiler</h3>
+<p>Which line fails, and with which error? Decide before you open it.</p>
+<pre><code>let t = Task::new("Ship it");
+let done = t.is_done();
+let title = t.into_title();
+println!("{done} {title}");
+t.complete();</code></pre>
+<details><summary>Answer</summary>
+<p>The last line, with two errors at once: <code>E0382 borrow of moved value: `t`</code> (moved by <code>into_title</code>) and <code>E0596 cannot borrow `t` as mutable, as it is not declared as mutable</code> (no <code>let mut</code>). The compiler reports both. <code>is_done</code> before the move is fine: <code>&amp;self</code> only borrows briefly.</p>
+</details>
+
+<!-- ------------------------------------------------------------------ -->
+<h2>Read next</h2>
+<p><strong>Primary source:</strong> <a href="https://doc.rust-lang.org/book/ch05-00-structs.html">Rust Book, chapter 5: Using Structs</a> (5.1 defining, 5.2 the example program, 5.3 method syntax). Around 30 minutes, and everything in this lesson is in there with more examples.</p>
+<p>Coming up: the exercises in <code>src/main.rs</code> (tag <code>session-02-problem</code>). Keep the <a href="../reference/structs.html">cheat sheet</a> open while you solve them.</p>
+
+<div class="box">
+<strong>Questions?</strong> Ask Claude in the chat. Anything that's unclear, "why is this so?", "how would I do X from Dart in Rust?": that's what the tutor is for.
+</div>
+
+</body>
+</html>
