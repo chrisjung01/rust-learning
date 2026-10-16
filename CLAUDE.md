@@ -2,27 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Projekt
+## Project
 
-Rust-Lernprojekt (Edition 2024, keine Dependencies). Übungen pro Session in `src/main.rs`, abgesichert durch Tests.
-Themen und Fortschritt stehen in `LERNZIELE.md`.
+Rust learning project (edition 2024, no dependencies). Each session's exercises live in `src/main.rs`, verified by tests.
+Topics and progress are tracked in `LEARNING_GOALS.md`.
+
+## Language
+
+- Code, comments, docs, commit messages and tags are in English.
+- Explanations in the chat are in German.
 
 ## Sessions
 
-- **Theorie zuerst:** Jede neue Session beginnt mit `/cj-teach <Thema aus LERNZIELE.md>`, um das Thema theoretisch zu vertiefen. Erst danach Übungen in `src/main.rs` schreiben. Der Skill kann nur vom User gestartet werden (`disable-model-invocation`) – Claude erinnert zu Session-Beginn daran, falls er noch nicht lief.
-- **Erklärungen ausführlich:** Konzepte gründlich erklären, mit dem Warum dahinter, Beispielen und Vergleich zu Dart. Lieber zu viel als zu knapp.
-- **Zwei Git-Tags pro Session:**
-  - `session-NN-problem` – Stand mit den Aufgaben (Code mit `todo!()`, Tests rot), vor dem Lösen
-  - `session-NN-solution` – Stand nach dem Lösen (Tests grün)
-  - `NN` zweistellig (`session-02-problem`). Session 1 hat nur `session-01-solution`, der Aufgaben-Stand wurde nie committet.
+- **Theory first:** Every new session starts with `/cj-teach <topic from LEARNING_GOALS.md>` to cover the theory in depth. Exercises in `src/main.rs` come only after that. Only the user can start the skill (`disable-model-invocation`); Claude reminds the user at the start of a session if it has not run yet.
+- **Thorough explanations:** Explain concepts in depth, with the reasoning behind them, examples and comparisons to Dart. Too much is better than too little.
+- **Two git tags per session:**
+  - `session-NN-problem`: the state with the exercises (code with `todo!()`, tests red), before solving
+  - `session-NN-solution`: the state after solving (tests green)
+  - `NN` has two digits (`session-02-problem`). Session 1 only has `session-01-solution`; its problem state was never committed.
 
-## Befehle
+## Commands
 
 ```sh
-cargo run                 # bauen + ausführen
+cargo run                 # build + run
 cargo build
-cargo test                # alle Tests
-cargo test <name>         # einzelner Test (Substring-Match auf Testnamen)
-cargo clippy              # Lints
-cargo fmt                 # formatieren
+cargo test                # all tests
+cargo test <name>         # single test (substring match on test names)
+cargo clippy              # lints
+cargo fmt                 # format
 ```
